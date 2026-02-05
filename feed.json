@@ -1,0 +1,22 @@
+{
+  "version": "https://jsonfeed.org/version/1.1",
+  "title": "Common Ground",
+  "home_page_url": "https://commongroundcontext.com/",
+  "feed_url": "https://commongroundcontext.github.io/feed.json",
+  "description": "On shared understanding in an age of fragmentation",
+  "language": "en-US",
+  "authors": [
+    {
+      "name": "Common Ground"
+    }
+  ],
+  "items": [
+    {
+      "id": "commonground-2026-02-01",
+      "title": "Post 1: February 1, 2026",
+      "url": "https://commongroundcontext.com/",
+      "date_published": "2026-02-01T00:00:00Z",
+      "content_text": "This is not a movement. Not a party. Not a demand for agreement."
+    }
+  ]
+}
