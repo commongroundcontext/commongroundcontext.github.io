@@ -12,6 +12,13 @@
   ],
   "items": [
     {
+      "id": "commonground-post-0002",
+      "title": "Post 0002 — February 8, 2026",
+      "url": "https://commongroundcontext.com/#post0002",
+      "date_published": "2026-02-08T00:00:00Z",
+      "content_html": "<p>You don't have to agree.</p><p>You don't have to choose a side.</p><p>You don't have to like</p><p>everything that follows.</p><p>You just have to stay human</p><p>while we figure out what comes next.</p>"
+    }
+    {
       "id": "commonground-post-0001",
       "title": "Post 0001 — February 1, 2026",
       "url": "https://commongroundcontext.com/#post0001",
