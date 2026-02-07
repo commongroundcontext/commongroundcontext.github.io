@@ -12,11 +12,11 @@
   ],
   "items": [
     {
-      "id": "commonground-2026-02-01",
-      "title": "Post 1: February 1, 2026",
-      "url": "https://commongroundcontext.com/",
+      "id": "commonground-post-0001",
+      "title": "Post 0001 — February 1, 2026",
+      "url": "https://commongroundcontext.com/#post0001",
       "date_published": "2026-02-01T00:00:00Z",
-      "content_text": "This is not a movement. Not a party. Not a demand for agreement."
+      "content_html": "<p><strong>This is not a movement.</strong></p><p>Not a party.</p><p><em>Not a demand for agreement.</em></p><p>It is a place to stand when the noise gets loud and the ground feels unsteady.</p><p>This will move slowly.</p><p><strong>On purpose.</strong></p>"
     }
   ]
 }
