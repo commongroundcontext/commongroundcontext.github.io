@@ -5,15 +5,15 @@
 
   <channel>
     <title>Common Ground</title>
-    <link>https://commongroundcontext.com/#post0001</link>
+    <link>https://commongroundcontext.com/</link>
     <description>On shared understanding in an age of fragmentation</description>
     <language>en-us</language>
     <lastBuildDate>Sat, 01 Feb 2026 00:00:00 GMT</lastBuildDate>
     <generator>Common Ground (static RSS)</generator>
 
     <item>
-      <title>Post 1: February 1, 2026</title>
-      <link>https://commongroundcontext.com/</link>
+      <title>Post 0001 - February 1, 2026</title>
+      <link>https://commongroundcontext.com/#post0001</link>
       <guid isPermaLink="false">commonground-post-0001</guid>
       <pubDate>Sat, 01 Feb 2026 00:00:00 GMT</pubDate>
       <dc:creator>Common Ground</dc:creator>
