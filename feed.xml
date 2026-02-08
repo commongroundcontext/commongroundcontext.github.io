@@ -3,13 +3,38 @@
      xmlns:content="http://purl.org/rss/1.0/modules/content/"
      xmlns:dc="http://purl.org/dc/elements/1.1/">
 
-  <channel>
+   <channel>
     <title>Common Ground</title>
     <link>https://commongroundcontext.com/</link>
     <description>On shared understanding in an age of fragmentation</description>
     <language>en-us</language>
     <lastBuildDate>Sat, 01 Feb 2026 00:00:00 GMT</lastBuildDate>
     <generator>Common Ground (static RSS)</generator>
+
+    <item>
+      <title>Post 0002 — February 8, 2026</title>
+      <link>https://commongroundcontext.com/#post0002</link>
+      <guid isPermaLink="false">commonground-post-0002</guid>
+      <pubDate>Sun, 08 Feb 2026 00:00:00 GMT</pubDate>
+      <dc:creator>Common Ground</dc:creator>
+
+      <description><![CDATA[
+You don’t have to agree.
+You don’t have to choose a side.
+You don’t have to like everything that follows.
+      ]]></description>
+
+      <content:encoded><![CDATA[
+<p>You don’t have to agree.</p>
+<p>You don’t have to choose a side.</p>
+
+<p>You don’t have to like</p>
+<p>everything that follows.</p>
+
+<p>You just have to stay human</p>
+<p>while we figure out what comes next.</p>
+      ]]></content:encoded>
+    </item>
 
     <item>
       <title>Post 0001 — February 1, 2026</title>
