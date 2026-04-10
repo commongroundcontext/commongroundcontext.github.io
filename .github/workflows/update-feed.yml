@@ -1,0 +1,60 @@
+name: Update Feed
+
+on:
+  schedule:
+    # Every Sunday at 14:00 UTC (10 AM Eastern / 7 AM Pacific)
+    # Gives the author time to publish before the bot runs.
+    - cron: '0 14 * * 0'
+
+  # Allow a manual run from the Actions tab at any time
+  workflow_dispatch:
+
+jobs:
+  update-feed:
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: write   # needed to commit and push the updated feed files
+
+    steps:
+      - name: Check out repo
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: pip install requests beautifulsoup4
+
+      - name: Run feed updater
+        run: python scripts/update_feed.py
+
+      - name: Commit and push if feeds changed
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add feed.json feed.xml
+
+          # Exit quietly if nothing changed (post not published yet)
+          if git diff --staged --quiet; then
+            echo "No changes — post not yet published."
+            exit 0
+          fi
+
+          # Read the new post number from feed.json for the commit message
+          POST_NUM=$(python - <<'EOF'
+import json, re
+with open("feed.json") as f:
+    d = json.load(f)
+nums = [int(re.search(r"(\d+)$", i["id"]).group(1)) for i in d["items"] if re.search(r"(\d+)$", i["id"])]
+print(f"{max(nums):04d}")
+EOF
+)
+          git commit -m "Add post ${POST_NUM} ($(date -u +%Y-%m-%d))"
+          git push
+
+)
+          git commit -m "Add post ${POST_NUM} ($(date -u +%Y-%m-%d))"
+          git push
