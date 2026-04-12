@@ -189,6 +189,13 @@ def main() -> None:
     soup      = BeautifulSoup(resp.text, "html.parser")
     page_text = soup.get_text(separator="\n")
 
+    # Diagnostic: confirm whether post text is present in the raw fetch
+    if f"Post {next_num}" in page_text:
+        print(f"  DEBUG: 'Post {next_num}' found in raw page text — proceeding")
+    else:
+        print(f"  DEBUG: 'Post {next_num}' NOT in raw page text — content is likely JS-rendered")
+        print(f"  DEBUG: Sample of fetched text (first 300 chars):\n{page_text[:300]}")
+
     # 3. Find the new post
     lines, post_date = find_post_content(page_text, next_num)
     if lines is None:
@@ -210,4 +217,5 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
+
 
