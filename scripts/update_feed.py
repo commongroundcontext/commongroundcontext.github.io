@@ -44,27 +44,28 @@ def find_post_content(page_text: str, post_num: int):
 
     Returns (lines, post_date) on success, or (None, None) if not found.
     """
-    # Accept "Post 11", "Post 011", "Post 0011" with any dash style
-    header_re = re.compile(
-        rf"Post\s+0*{post_num}\s*[-\u2013\u2014]{{1,2}}\s*(\d{{4}}-\d{{2}}-\d{{2}})",
-        re.IGNORECASE,
-    )
-
-    m = header_re.search(page_text)
+    # Step 1: find "Post 11" (flexible — any leading zeros, case insensitive)
+    post_re = re.compile(rf"Post\s+0*{post_num}\b", re.IGNORECASE)
+    m = post_re.search(page_text)
     if m is None:
         print(f"  Heading 'Post {post_num}' not found in page text.")
         return None, None
 
-    # Extract the date from the heading
-    try:
-        post_date = datetime.strptime(m.group(1), "%Y-%m-%d").replace(tzinfo=timezone.utc)
-    except ValueError:
-        post_date = datetime.now(timezone.utc).replace(
-            hour=0, minute=0, second=0, microsecond=0
-        )
+    # Step 2: look for a date (YYYY-MM-DD) within 50 chars of the heading
+    window = page_text[m.start(): m.start() + 50]
+    date_m = re.search(r"(\d{4}-\d{2}-\d{2})", window)
+    if date_m:
+        try:
+            post_date = datetime.strptime(date_m.group(1), "%Y-%m-%d").replace(tzinfo=timezone.utc)
+        except ValueError:
+            post_date = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
+        content_start = m.start() + date_m.end()
+    else:
+        post_date = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
+        content_start = m.end()
 
     # Collect lines after the heading
-    after = page_text[m.end():]
+    after = page_text[content_start:]
     lines = []
     for line in after.splitlines():
         stripped = line.strip()
