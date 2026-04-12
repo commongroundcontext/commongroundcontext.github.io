@@ -3,9 +3,11 @@
 Scrapes the latest post from commongroundcontext.com and prepends it
 to feed.json and feed.xml.
 
-Run automatically every Sunday via GitHub Actions, or manually via
-workflow_dispatch. Exits cleanly (code 0) if the next post is not yet
-published, so the workflow never fails on a quiet Sunday.
+Posts on the site are plain text separated by underscore dividers — there
+are no HTML id attributes. This script locates each post by its heading
+text ("Post 11 –– 2026-04-12") and collects the lines that follow.
+
+Exits cleanly (code 0) if the next post is not yet published.
 """
 
 import json
@@ -16,7 +18,7 @@ from datetime import datetime, timezone
 import requests
 from bs4 import BeautifulSoup
 
-SITE_URL = "https://commongroundcontext.com/"
+SITE_URL  = "https://commongroundcontext.com/"
 FEED_JSON = "feed.json"
 FEED_XML  = "feed.xml"
 
@@ -33,65 +35,76 @@ def get_latest_post_number(feed_data: dict) -> int:
     return max_num
 
 
-def find_post_element(soup: BeautifulSoup, post_num: int):
+def find_post_content(page_text: str, post_num: int):
     """
-    Try several strategies to locate the HTML element that wraps the post.
-    Returns a Tag or None.
+    Locate the post by matching its heading line, e.g.:
+        Post 11 –– 2026-04-12
+    Then collect the content lines that follow until the next
+    underscore separator or the next post heading.
+
+    Returns (lines, post_date) on success, or (None, None) if not found.
     """
-    post_id = f"post{post_num:04d}"
+    # Accept "Post 11", "Post 011", "Post 0011" with any dash style
+    header_re = re.compile(
+        rf"Post\s+0*{post_num}\s*[-\u2013\u2014]{{1,2}}\s*(\d{{4}}-\d{{2}}-\d{{2}})",
+        re.IGNORECASE,
+    )
 
-    # Strategy 1: any element whose id attribute equals "post0011"
-    el = soup.find(id=post_id)
-    if el is not None:
-        print(f"  Found via id='{post_id}' (<{el.name}>)")
-        return el
+    m = header_re.search(page_text)
+    if m is None:
+        print(f"  Heading 'Post {post_num}' not found in page text.")
+        return None, None
 
-    # Strategy 2: <a name="post0011"> — walk up to nearest block container
-    anchor = soup.find("a", attrs={"name": post_id})
-    if anchor:
-        for parent in anchor.parents:
-            if parent.name in ("section", "article", "div"):
-                print(f"  Found via <a name='{post_id}'>, parent <{parent.name}>")
-                return parent
-        return anchor.parent
-
-    # Strategy 3: heading whose text contains "Post NNN" (e.g. "Post 11")
-    for tag in ("h1", "h2", "h3", "h4"):
-        heading = soup.find(
-            tag, string=re.compile(rf"Post\s+0*{post_num}\b", re.IGNORECASE)
+    # Extract the date from the heading
+    try:
+        post_date = datetime.strptime(m.group(1), "%Y-%m-%d").replace(tzinfo=timezone.utc)
+    except ValueError:
+        post_date = datetime.now(timezone.utc).replace(
+            hour=0, minute=0, second=0, microsecond=0
         )
-        if heading:
-            container = heading.parent
-            print(f"  Found via heading text in <{tag}>, parent <{container.name}>")
-            return container
 
-    print(f"  No element found for post {post_num:04d}")
-    return None
+    # Collect lines after the heading
+    after = page_text[m.end():]
+    lines = []
+    for line in after.splitlines():
+        stripped = line.strip()
+        if not stripped:
+            continue
+        if re.match(r"_{4,}", stripped):                              # underscore divider
+            break
+        if re.match(r"Post\s+\d+\s*[-\u2013\u2014]", stripped, re.IGNORECASE):  # next heading
+            break
+        lines.append(stripped)
 
+    if not lines:
+        print("  Found heading but no content lines after it.")
+        return None, None
 
-def extract_paragraphs(element) -> list:
-    """Return all non-empty <p> descendants of an element."""
-    return [p for p in element.find_all("p") if p.get_text().strip()]
+    print(f"  Found {len(lines)} content line(s) for Post {post_num:04d}")
+    return lines, post_date
 
 
 def format_title(post_num: int, post_date: datetime) -> str:
     """'Post 0011 — April 12, 2026'"""
-    return f"Post {post_num:04d} \u2014 {post_date.strftime('%B')} {post_date.day}, {post_date.year}"
+    return (
+        f"Post {post_num:04d} \u2014 "
+        f"{post_date.strftime('%B')} {post_date.day}, {post_date.year}"
+    )
 
 
-def to_json_html(paragraphs: list) -> str:
-    """Single-line concatenation of <p>text</p> tags (JSON Feed style)."""
-    return "".join(f"<p>{p.get_text()}</p>" for p in paragraphs)
+def lines_to_json_html(lines: list) -> str:
+    """Single-line <p>text</p> concatenation for JSON Feed."""
+    return "".join(f"<p>{line}</p>" for line in lines)
 
 
-def to_xml_html(paragraphs: list) -> str:
-    """One <p>text</p> per line (RSS content:encoded style)."""
-    return "\n".join(f"<p>{p.get_text()}</p>" for p in paragraphs)
+def lines_to_xml_html(lines: list) -> str:
+    """One <p>text</p> per line for RSS content:encoded."""
+    return "\n".join(f"<p>{line}</p>" for line in lines)
 
 
-def to_description(paragraphs: list, lines: int = 3) -> str:
-    """Plain-text snippet of the first N paragraphs (RSS description)."""
-    return "\n".join(p.get_text().strip() for p in paragraphs[:lines])
+def lines_to_description(lines: list, count: int = 3) -> str:
+    """Plain-text snippet of the first N lines for RSS description."""
+    return "\n".join(lines[:count])
 
 
 # ── feed writers ──────────────────────────────────────────────────────────────
@@ -107,7 +120,6 @@ def update_feed_json(post_num: int, post_date: datetime, content_html: str) -> N
         "date_published": post_date.strftime("%Y-%m-%dT00:00:00Z"),
         "content_html":   content_html,
     }
-
     data["items"].insert(0, new_item)
 
     with open(FEED_JSON, "w", encoding="utf-8", newline="\n") as f:
@@ -143,10 +155,7 @@ def update_feed_xml(
         f"    </item>"
     )
 
-    # Prepend before the first existing <item>
     xml = xml.replace("<item>", new_item + "\n\n    <item>", 1)
-
-    # Refresh lastBuildDate
     xml = re.sub(
         r"<lastBuildDate>.*?</lastBuildDate>",
         f"<lastBuildDate>{pub_date}</lastBuildDate>",
@@ -162,7 +171,7 @@ def update_feed_xml(
 # ── main ──────────────────────────────────────────────────────────────────────
 
 def main() -> None:
-    # 1. Determine which post number to look for
+    # 1. Determine next post number
     with open(FEED_JSON, "r", encoding="utf-8") as f:
         feed_data = json.load(f)
 
@@ -170,40 +179,31 @@ def main() -> None:
     next_num   = latest_num + 1
     print(f"Latest post in feed: {latest_num:04d}  →  checking for: {next_num:04d}")
 
-    # 2. Fetch the live website
+    # 2. Fetch the page and extract all visible text
     print(f"Fetching {SITE_URL} ...")
-    resp = requests.get(SITE_URL, timeout=30, headers={"User-Agent": "CommonGround-FeedBot/1.0"})
+    resp = requests.get(
+        SITE_URL, timeout=30, headers={"User-Agent": "CommonGround-FeedBot/1.0"}
+    )
     resp.raise_for_status()
-    soup = BeautifulSoup(resp.text, "html.parser")
 
-    # 3. Locate the new post element
-    el = find_post_element(soup, next_num)
-    if el is None:
+    soup      = BeautifulSoup(resp.text, "html.parser")
+    page_text = soup.get_text(separator="\n")
+
+    # 3. Find the new post
+    lines, post_date = find_post_content(page_text, next_num)
+    if lines is None:
         print(f"Post {next_num:04d} not yet published. Nothing to update.")
         sys.exit(0)
 
-    paragraphs = extract_paragraphs(el)
-    if not paragraphs:
-        print("ERROR: Post element found but contains no <p> tags.")
-        print("       The site HTML structure may have changed — inspect manually.")
-        sys.exit(1)
-
-    print(f"  Extracted {len(paragraphs)} paragraph(s)")
-
-    # 4. Build content in the two required formats
-    content_json = to_json_html(paragraphs)
-    content_xml  = to_xml_html(paragraphs)
-    description  = to_description(paragraphs)
-
-    # Post date = today (the workflow runs on Sunday)
-    post_date = datetime.now(timezone.utc).replace(
-        hour=0, minute=0, second=0, microsecond=0
-    )
     print(f"  Title: {format_title(next_num, post_date)}")
 
-    # 5. Write both feeds
-    update_feed_json(next_num, post_date, content_json)
-    update_feed_xml(next_num, post_date, content_xml, description)
+    # 4. Update both feeds
+    update_feed_json(next_num, post_date, lines_to_json_html(lines))
+    update_feed_xml(
+        next_num, post_date,
+        lines_to_xml_html(lines),
+        lines_to_description(lines),
+    )
 
     print("Done.")
 
