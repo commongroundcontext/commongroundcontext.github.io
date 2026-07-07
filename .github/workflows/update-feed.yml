@@ -43,13 +43,8 @@ jobs:
             exit 0
           fi
 
-          # Read the new post number from feed.json for the commit message
-          POST_NUM=$(python -c '
-import json, re
-with open("feed.json") as f:
-    d = json.load(f)
-nums = [int(m.group()) for i in d.get("items",[]) for m in [re.search(r"[0-9]+$", i.get("id",""))] if m]
-print(f"{max(nums):04d}" if nums else "0000")
-')
+          # Read the newest post number from feed.json for the commit message.
+          # Single-line to avoid embedding multi-line Python inside YAML.
+          POST_NUM=$(python -c "import json,re; d=json.load(open('feed.json')); nums=[int(re.search(r'[0-9]+\$', i.get('id','')).group()) for i in d.get('items',[]) if re.search(r'[0-9]+\$', i.get('id',''))]; print(f'{max(nums):04d}' if nums else '0000')")
           git commit -m "Add post ${POST_NUM} ($(date -u +%Y-%m-%d))"
           git push
