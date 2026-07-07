@@ -172,7 +172,7 @@ def update_feed_xml(
 # ── main ──────────────────────────────────────────────────────────────────────
 
 def main() -> None:
-    # 1. Determine next post number
+    # 1. Determine the next post number to look for.
     with open(FEED_JSON, "r", encoding="utf-8") as f:
         feed_data = json.load(f)
 
@@ -180,7 +180,7 @@ def main() -> None:
     next_num   = latest_num + 1
     print(f"Latest post in feed: {latest_num:04d}  →  checking for: {next_num:04d}")
 
-    # 2. Fetch the page and extract all visible text
+    # 2. Fetch the page once and extract all visible text.
     print(f"Fetching {SITE_URL} ...")
     resp = requests.get(
         SITE_URL, timeout=30, headers={"User-Agent": "CommonGround-FeedBot/1.0"}
@@ -197,23 +197,39 @@ def main() -> None:
         print(f"  DEBUG: 'Post {next_num}' NOT in raw page text — content is likely JS-rendered")
         print(f"  DEBUG: Sample of fetched text (first 300 chars):\n{page_text[:300]}")
 
-    # 3. Find the new post
-    lines, post_date = find_post_content(page_text, next_num)
-    if lines is None:
+    # 3. Catch-up loop: add EVERY new post found, from next_num upward, so a
+    #    missed/late post never leaves the feed permanently behind. We process in
+    #    ascending order; each writer prepends, so the highest number ends on top.
+    #    A safety cap prevents an infinite loop if the heading regex ever misbehaves.
+    added = 0
+    num   = next_num
+    MAX_CATCH_UP = 100
+    while added < MAX_CATCH_UP:
+        lines, post_date = find_post_content(page_text, num)
+        if lines is None:
+            print(f"Post {num:04d} not published yet. Stopping.")
+            break
+
+        print(f"  Title: {format_title(num, post_date)}")
+
+        # 4. Update both feeds for this post.
+        update_feed_json(num, post_date, lines_to_json_html(lines))
+        update_feed_xml(
+            num, post_date,
+            lines_to_xml_html(lines),
+            lines_to_description(lines),
+        )
+        added += 1
+        num   += 1
+
+    if added == 0:
         print(f"Post {next_num:04d} not yet published. Nothing to update.")
         sys.exit(0)
 
-    print(f"  Title: {format_title(next_num, post_date)}")
-
-    # 4. Update both feeds
-    update_feed_json(next_num, post_date, lines_to_json_html(lines))
-    update_feed_xml(
-        next_num, post_date,
-        lines_to_xml_html(lines),
-        lines_to_description(lines),
-    )
-
-    print("Done.")
+    print(f"Done. Added {added} new post(s): "
+          f"{next_num:04d}"
+          + (f"–{num - 1:04d}" if added > 1 else "")
+          + ".")
 
 
 if __name__ == "__main__":
